@@ -21,53 +21,6 @@ export default function Dashboard({ user, onLogout }) {
 
   const handleLaunchApp = async (appId) => {
     if (appId === 'money-planner' || appId === 'stock-planner') {
-      // 1. Immediately open a blank window synchronously inside user click gesture to bypass popup blockers
-      const newWindow = window.open('about:blank', '_blank', 'noopener,noreferrer');
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>Connecting to Planner...</title>
-              <style>
-                body {
-                  background-color: #030712;
-                  color: #f3f4f6;
-                  font-family: ui-sans-serif, system-ui, sans-serif;
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  justify-content: center;
-                  height: 100vh;
-                  margin: 0;
-                }
-                .spinner {
-                  border: 3px solid rgba(255, 255, 255, 0.1);
-                  border-top: 3px solid #10b981;
-                  border-radius: 50%;
-                  width: 32px;
-                  height: 32px;
-                  animation: spin 1s linear infinite;
-                  margin-bottom: 16px;
-                }
-                @keyframes spin {
-                  0% { transform: rotate(0deg); }
-                  100% { transform: rotate(360deg); }
-                }
-                .text {
-                  font-size: 14px;
-                  font-weight: 500;
-                  letter-spacing: 0.025em;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="spinner"></div>
-              <div class="text">Establishing secure Unloan session...</div>
-            </body>
-          </html>
-        `);
-      }
-
       const username = user?.username || 'user';
       let token = '';
 
@@ -122,12 +75,8 @@ export default function Dashboard({ user, onLogout }) {
         targetUrl = `${base}/?token=${encodeURIComponent(token)}`;
       }
 
-      if (newWindow) {
-        newWindow.location.href = targetUrl;
-      } else {
-        // Fallback in case popup blocker blocked it initially or window was closed
-        window.open(targetUrl, '_blank', 'noopener,noreferrer');
-      }
+      // Redirect in the same window/tab
+      window.location.href = targetUrl;
     } else {
       setActiveApp(appId);
     }
