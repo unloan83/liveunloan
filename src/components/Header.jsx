@@ -4,9 +4,9 @@ import { Leaf, LogOut, User } from 'lucide-react';
 export default function Header({ user, onLogout }) {
   return (
     <header className="w-full max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-800/80 bg-gray-950/20 backdrop-blur-md sticky top-0 z-50">
-      {/* Brand Logo */}
-      <div className="flex items-center select-none">
-        <img src="/logo.png" alt="Unloan Logo" className="h-16 md:h-20 w-auto object-contain" />
+      {/* Brand Logo Badge */}
+      <div className="flex items-center select-none bg-white px-4 py-2 rounded-2xl shadow-lg shadow-white/5 border border-white/10">
+        <img src="/logo.png" alt="Unloan Logo" className="h-12 md:h-14 w-auto object-contain" />
       </div>
 
       {/* Styled Tagline Box */}
