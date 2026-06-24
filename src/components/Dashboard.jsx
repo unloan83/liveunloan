@@ -19,11 +19,60 @@ import {
 export default function Dashboard({ user, onLogout }) {
   const [activeApp, setActiveApp] = useState(null);
 
-  const handleLaunchApp = (appId) => {
-    if (appId === 'money-planner') {
-      window.open('https://unloanmoneyview.vercel.app', '_blank', 'noopener,noreferrer');
-    } else if (appId === 'stock-planner') {
-      window.open('https://unloanstockview.vercel.app', '_blank', 'noopener,noreferrer');
+  const handleLaunchApp = async (appId) => {
+    if (appId === 'money-planner' || appId === 'stock-planner') {
+      const username = user?.username || 'user';
+      let token = '';
+
+      // Try fetching token from serverless API in production
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        try {
+          const response = await fetch(`/api/token?username=${encodeURIComponent(username)}`);
+          const data = await response.json();
+          token = data.token;
+        } catch (e) {
+          console.error('Failed to fetch transition token from API:', e);
+        }
+      }
+
+      // If token not fetched (local dev fallback), sign client-side using Web Crypto
+      if (!token) {
+        const secret = 'fallback_secret_for_local_dev';
+        const timestamp = Date.now().toString();
+        const payload = `${username}:${timestamp}`;
+
+        try {
+          const encoder = new TextEncoder();
+          const key = await window.crypto.subtle.importKey(
+            'raw',
+            encoder.encode(secret),
+            { name: 'HMAC', hash: { name: 'SHA-256' } },
+            false,
+            ['sign']
+          );
+          const signatureBuffer = await window.crypto.subtle.sign(
+            'HMAC',
+            key,
+            encoder.encode(payload)
+          );
+          const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+          const signature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          token = `${username}:${timestamp}:${signature}`;
+        } catch (err) {
+          console.error('Client-side signature generation failed, using dynamic string:', err);
+          token = `${username}:${timestamp}:dev_dummy_signature`;
+        }
+      }
+
+      const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+      if (appId === 'money-planner') {
+        const base = isDev ? 'http://localhost:8000' : 'https://unloanmoneyview.vercel.app';
+        window.open(`${base}/?token=${encodeURIComponent(token)}`, '_blank', 'noopener,noreferrer');
+      } else if (appId === 'stock-planner') {
+        const base = isDev ? 'http://localhost:3000' : 'https://unloanstockview.vercel.app';
+        window.open(`${base}/?token=${encodeURIComponent(token)}`, '_blank', 'noopener,noreferrer');
+      }
     } else {
       setActiveApp(appId);
     }
