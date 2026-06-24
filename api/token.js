@@ -1,6 +1,6 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
 
-module.exports = (req, res) => {
+export default function handler(req, res) {
   // Allow CORS from localhost and our Vercel domains
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,4 +29,4 @@ module.exports = (req, res) => {
   const token = `${username}:${timestamp}:${signature}`;
   
   res.status(200).json({ token });
-};
+}
