@@ -19,6 +19,16 @@ import {
 export default function Dashboard({ user, onLogout }) {
   const [activeApp, setActiveApp] = useState(null);
 
+  const handleLaunchApp = (appId) => {
+    if (appId === 'money-planner') {
+      window.open('https://unloanmoneyview.vercel.app', '_blank', 'noopener,noreferrer');
+    } else if (appId === 'stock-planner') {
+      window.open('https://unloanstockview.vercel.app', '_blank', 'noopener,noreferrer');
+    } else {
+      setActiveApp(appId);
+    }
+  };
+
   // App 1: Money Planner State & Component
   const MoneyPlannerApp = () => {
     const [income, setIncome] = useState(5000);
@@ -469,7 +479,7 @@ export default function Dashboard({ user, onLogout }) {
                 <button
                   id={`launcher-${app.id}`}
                   key={app.id}
-                  onClick={() => setActiveApp(app.id)}
+                  onClick={() => handleLaunchApp(app.id)}
                   className={`glass-panel bg-gradient-to-br ${app.colorClass} rounded-2xl p-6 text-left hover:scale-[1.02] active:scale-[0.99] transition-all duration-300 flex flex-col justify-between group cursor-pointer`}
                 >
                   <div className="w-12 h-12 rounded-xl bg-gray-950 flex items-center justify-center border border-gray-850 shadow-inner mb-4">

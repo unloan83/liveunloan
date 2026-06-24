@@ -6,7 +6,7 @@ export default function Header({ user, onLogout }) {
     <header className="w-full max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-800/80 bg-gray-950/20 backdrop-blur-md sticky top-0 z-50">
       {/* Brand Logo */}
       <div className="flex items-center select-none">
-        <img src="/logo.png" alt="Unloan Logo" className="h-10 md:h-12 w-auto object-contain" />
+        <img src="/logo.png" alt="Unloan Logo" className="h-16 md:h-20 w-auto object-contain" />
       </div>
 
       {/* Styled Tagline Box */}
