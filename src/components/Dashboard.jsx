@@ -3,12 +3,8 @@ import {
   PiggyBank, 
   TrendingUp, 
   ShoppingBag, 
-  Clock, 
-  Lock, 
-  ChevronRight, 
-  ArrowLeft,
-  DollarSign,
-  Plus,
+  Clock, ChevronRight,
+ArrowLeft,Plus,
   Trash2,
   PieChart,
   Percent,
@@ -18,68 +14,29 @@ import {
 
 export default function Dashboard({ user, onLogout }) {
   const [activeApp, setActiveApp] = useState(null);
+  const [notice, setNotice] = useState('');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   const handleLaunchApp = async (appId) => {
     if (appId === 'money-planner' || appId === 'stock-planner') {
-      const username = user?.username || 'user';
-      let token = '';
+      const response = await fetch('/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId }),
+      });
+      const payload = await response.json().catch(() => ({}));
 
-      // Try fetching token from serverless API in production
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        try {
-          const response = await fetch(`/api/token?username=${encodeURIComponent(username)}`);
-          const data = await response.json();
-          token = data.token;
-        } catch (e) {
-          console.error('Failed to fetch transition token from API:', e);
-        }
+      if (!response.ok || !payload.redirectTo) {
+        setNotice(payload.error || 'Unable to open this app right now.');
+        return;
       }
 
-      // If token not fetched (local dev fallback), sign client-side using Web Crypto
-      if (!token) {
-        const secret = 'fallback_secret_for_local_dev';
-        const timestamp = Date.now().toString();
-        const payload = `${username}:${timestamp}`;
-
-        try {
-          const encoder = new TextEncoder();
-          const key = await window.crypto.subtle.importKey(
-            'raw',
-            encoder.encode(secret),
-            { name: 'HMAC', hash: { name: 'SHA-256' } },
-            false,
-            ['sign']
-          );
-          const signatureBuffer = await window.crypto.subtle.sign(
-            'HMAC',
-            key,
-            encoder.encode(payload)
-          );
-          const signatureArray = Array.from(new Uint8Array(signatureBuffer));
-          const signature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
-          token = `${username}:${timestamp}:${signature}`;
-        } catch (err) {
-          console.error('Client-side signature generation failed, using dynamic string:', err);
-          token = `${username}:${timestamp}:dev_dummy_signature`;
-        }
-      }
-
-      const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      let targetUrl = '';
-
-      if (appId === 'money-planner') {
-        const base = isDev ? 'http://localhost:8000' : 'https://unloanmoneyview.vercel.app';
-        targetUrl = `${base}/?token=${encodeURIComponent(token)}`;
-      } else if (appId === 'stock-planner') {
-        const base = isDev ? 'http://localhost:3000' : 'https://unloanstockview.vercel.app';
-        targetUrl = `${base}/?token=${encodeURIComponent(token)}`;
-      }
-
-      // Redirect in the same window/tab
-      window.location.href = targetUrl;
-    } else {
-      setActiveApp(appId);
+      window.location.href = payload.redirectTo;
+      return;
     }
+
+    setActiveApp(appId);
   };
 
   // App 1: Money Planner State & Component
@@ -500,6 +457,9 @@ export default function Dashboard({ user, onLogout }) {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-10 transition-all duration-500">
+      {notice && <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{notice}</div>}
+      {isProfileOpen && <EditProfileModal user={user} onClose={() => setIsProfileOpen(false)} onSaved={() => setNotice('Profile updated. Please sign in again if you changed your email or password.')} />}
+      {isAdminOpen && <AdminControlModal onClose={() => setIsAdminOpen(false)} />}
       {activeApp ? (
         /* Render Selected Application inside App Wrapper Container */
         <div className="glass-panel rounded-3xl p-6 md:p-8 animate-fadeIn">
@@ -512,7 +472,28 @@ export default function Dashboard({ user, onLogout }) {
         <div className="space-y-10">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-              <h2 className="text-2xl font-extrabold text-white tracking-tight">Your Financial Control Desk</h2>
+              <div>
+                <h2 className="text-2xl font-extrabold text-white tracking-tight">Your Financial Control Desk</h2>
+                <p className="text-xs text-gray-500 mt-1">{user?.portfolioName ? user.portfolioName + ' portfolio is mapped to this login.' : 'One login controls all Unloan apps.'}</p>
+              </div>
+              {user?.role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => setIsAdminOpen(true)}
+                  className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                >
+                  Admin Control
+                </button>
+              )}
+              {user?.role === 'user' && (
+                <button
+                  type="button"
+                  onClick={() => setIsProfileOpen(true)}
+                  className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-800 text-gray-300 hover:border-emerald-500/30 hover:text-emerald-300 transition-all cursor-pointer"
+                >
+                  Edit Profile
+                </button>
+              )}
               <button
                 id="dash-logout-btn"
                 onClick={onLogout}
@@ -578,6 +559,136 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function EditProfileModal({ user, onClose, onSaved }) {
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName, email, password }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(payload.error || 'Unable to save profile.');
+        return;
+      }
+      onSaved(payload.user);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
+      <section className="glass-panel w-full max-w-md rounded-2xl border border-gray-800 p-5 text-gray-100 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-white">Edit Profile</h3>
+            <p className="mt-1 text-sm text-gray-400">Update your name, email, or password.</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-xs font-bold text-gray-400 hover:text-white">Close</button>
+        </div>
+        <div className="space-y-3">
+          <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} className="w-full rounded-xl border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="Display name" />
+          <input value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-xl border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="Email" type="email" />
+          <input value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="New password (optional)" type="password" />
+          {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>}
+          <button type="button" onClick={save} disabled={saving} className="w-full rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-gray-950 disabled:opacity-70">{saving ? 'Saving...' : 'Save Profile'}</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AdminControlModal({ onClose }) {
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
+
+  const refreshUsers = async () => {
+    const response = await fetch('/api/admin/users');
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) setUsers((payload.users || []).map((user) => ({ ...user, password: '' })));
+    else setError(payload.error || 'Unable to load users.');
+  };
+
+  React.useEffect(() => {
+    refreshUsers();
+  }, []);
+
+  const updateUser = (index, next) => {
+    setUsers((items) => items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...next } : item)));
+  };
+
+  const saveUser = async (user) => {
+    setError('');
+    const response = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || 'Unable to save user.');
+      return;
+    }
+    await refreshUsers();
+  };
+
+  const resetUser = async (seedEmail) => {
+    setError('');
+    const response = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset', seedEmail }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || 'Unable to reset user.');
+      return;
+    }
+    setUsers((payload.users || []).map((user) => ({ ...user, password: '' })));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
+      <section className="glass-panel max-h-[84vh] w-full max-w-5xl overflow-auto rounded-2xl border border-gray-800 p-5 text-gray-100 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-white">Admin Control</h3>
+            <p className="mt-1 text-sm text-gray-400">Manage user details, passwords, and portfolio mapping.</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-xs font-bold text-gray-400 hover:text-white">Close</button>
+        </div>
+        {error && <p className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>}
+        <div className="grid gap-3">
+          {users.map((item, index) => (
+            <div key={item.seedEmail || item.email} className="grid gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-4 md:grid-cols-2">
+              <strong className="text-sm text-white md:col-span-2">{item.role === 'admin' ? 'Admin' : item.displayName}</strong>
+              <input value={item.displayName || ''} onChange={(event) => updateUser(index, { displayName: event.target.value })} className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="Display name" />
+              <input value={item.email || ''} onChange={(event) => updateUser(index, { email: event.target.value })} className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="Email" type="email" />
+              <input value={item.portfolioName || ''} onChange={(event) => updateUser(index, { portfolioName: event.target.value })} className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="Portfolio mapping" />
+              <input value={item.password || ''} onChange={(event) => updateUser(index, { password: event.target.value })} className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white" placeholder="New password (optional)" type="password" />
+              <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+                <button type="button" onClick={() => saveUser(item)} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-gray-950">Save</button>
+                <button type="button" onClick={() => resetUser(item.seedEmail)} className="rounded-lg border border-gray-700 px-3 py-2 text-xs font-bold text-gray-300 hover:text-white">Reset</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

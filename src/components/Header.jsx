@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 
 export default function Header({ user, onLogout }) {
   return (

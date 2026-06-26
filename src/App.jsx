@@ -14,22 +14,18 @@ function App() {
   const [showPwaBanner, setShowPwaBanner] = useState(true);
   const [showManualTip, setShowManualTip] = useState(false);
 
-  // Load existing session and register PWA install prompt listener
+  // Load existing server session and register PWA install prompt listener
   useEffect(() => {
-    try {
-      const savedSession = localStorage.getItem('unloan_session');
-      if (savedSession) {
-        setUser(JSON.parse(savedSession));
-      }
-    } catch (e) {
-      console.error('Failed to parse session from localStorage:', e);
-    } finally {
-      setLoading(false);
-      // Trigger entrance animation
-      setTimeout(() => {
-        setAnimationClass('opacity-100 translate-y-0');
-      }, 100);
-    }
+    fetch('/api/auth/session')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => setUser(payload?.user ?? null))
+      .catch(() => setUser(null))
+      .finally(() => {
+        setLoading(false);
+        setTimeout(() => {
+          setAnimationClass('opacity-100 translate-y-0');
+        }, 100);
+      });
 
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
@@ -63,7 +59,6 @@ function App() {
     setAnimationClass('opacity-0 -translate-y-4');
     setTimeout(() => {
       setUser(userSession);
-      localStorage.setItem('unloan_session', JSON.stringify(userSession));
       // Fade in new view
       setTimeout(() => {
         setAnimationClass('opacity-100 translate-y-0');
@@ -71,12 +66,12 @@ function App() {
     }, 300);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
     // Fade out
     setAnimationClass('opacity-0 translate-y-4');
     setTimeout(() => {
       setUser(null);
-      localStorage.removeItem('unloan_session');
       // Fade in login view
       setTimeout(() => {
         setAnimationClass('opacity-100 translate-y-0');
