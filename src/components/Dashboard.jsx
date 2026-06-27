@@ -15,24 +15,34 @@ ArrowLeft,Plus,
 export default function Dashboard({ user, onLogout }) {
   const [activeApp, setActiveApp] = useState(null);
   const [notice, setNotice] = useState('');
+  const [launchingApp, setLaunchingApp] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   const handleLaunchApp = async (appId) => {
     if (appId === 'money-planner' || appId === 'stock-planner') {
-      const response = await fetch('/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId }),
-      });
-      const payload = await response.json().catch(() => ({}));
+      if (launchingApp) return;
+      setLaunchingApp(appId);
+      setNotice('');
+      try {
+        const response = await fetch('/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ appId }),
+        });
+        const payload = await response.json().catch(() => ({}));
 
-      if (!response.ok || !payload.redirectTo) {
-        setNotice(payload.error || 'Unable to open this app right now.');
-        return;
+        if (!response.ok || !payload.redirectTo) {
+          setNotice(payload.error || 'Unable to open this app right now.');
+          setLaunchingApp(null);
+          return;
+        }
+
+        window.location.assign(payload.redirectTo);
+      } catch {
+        setNotice('Unable to open this app right now. Please check your connection and try again.');
+        setLaunchingApp(null);
       }
-
-      window.location.href = payload.redirectTo;
       return;
     }
 
@@ -511,10 +521,13 @@ export default function Dashboard({ user, onLogout }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {activeAppsList.map((app) => (
                 <button
+                  type="button"
                   id={`launcher-${app.id}`}
                   key={app.id}
                   onClick={() => handleLaunchApp(app.id)}
-                  className={`glass-panel bg-gradient-to-br ${app.colorClass} rounded-2xl p-6 text-left hover:scale-[1.02] active:scale-[0.99] transition-all duration-300 flex flex-col justify-between group cursor-pointer`}
+                  disabled={Boolean(launchingApp)}
+                  aria-busy={launchingApp === app.id}
+                  className={`glass-panel bg-gradient-to-br ${app.colorClass} rounded-2xl p-6 min-h-56 touch-manipulation text-left hover:scale-[1.02] active:scale-[0.99] transition-all duration-300 flex flex-col justify-between group cursor-pointer disabled:cursor-wait disabled:opacity-70`}
                 >
                   <div className="w-12 h-12 rounded-xl bg-gray-950 flex items-center justify-center border border-gray-850 shadow-inner mb-4">
                     {app.icon}
@@ -527,7 +540,7 @@ export default function Dashboard({ user, onLogout }) {
                     <p className="text-xs text-gray-400 leading-relaxed mb-4">{app.desc}</p>
                   </div>
                   <span className="text-xs font-bold tracking-wider uppercase border border-gray-850 px-3 py-1 bg-gray-950/80 rounded-md self-start">
-                    Launch
+                    {launchingApp === app.id ? 'Opening...' : 'Launch'}
                   </span>
                 </button>
               ))}
