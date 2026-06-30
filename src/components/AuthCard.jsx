@@ -14,10 +14,7 @@ export default function AuthCard({ onLoginSuccess }) {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.email) newErrors.email = 'Email address or admin username is required';
-    else if (formData.email.trim().toLowerCase() !== 'admin' && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address or the admin username';
-    }
+    if (!formData.email.trim()) newErrors.email = 'Email address or admin username is required';
     if (!formData.password) newErrors.password = 'Password is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

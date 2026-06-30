@@ -9,6 +9,8 @@ const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 const adminLoginAlias = 'admin';
+const configuredAdminUsername = process.env.DASHBOARD_USERNAME?.trim();
+const configuredAdminPassword = process.env.DASHBOARD_PASSWORD;
 
 const seedAccounts = [
   { email: 'live.unloan@gmail.com', displayName: 'Admin', role: 'admin', salt: '8c39534f9012a9cc324980ee76347bcc', passwordHash: 'f2304cf6a142c8cecf66c0702a2289dc4ddf60400e9d0cdff0c3bcf6161e8de3' },
@@ -49,6 +51,10 @@ export function clearSessionCookie(res) {
 
 export async function validateCredentials(email, password) {
   const normalizedEmail = normalizeEmail(email);
+  if (verifyConfiguredAdminCredentials(normalizedEmail, password)) {
+    return toPublicProfile(seedAccounts.find((account) => account.role === 'admin'));
+  }
+
   const overrides = await readAuthOverridesSafely();
   const adminSeed = seedAccounts.find((account) => account.role === 'admin');
   const isAdminAlias = normalizedEmail === adminLoginAlias;
@@ -66,6 +72,15 @@ export async function validateCredentials(email, password) {
   if (!verifyPassword(password, seed.salt, seed.passwordHash)) return null;
 
   return toPublicProfile(seed);
+}
+
+function verifyConfiguredAdminCredentials(identifier, password) {
+  if (!configuredAdminUsername || !configuredAdminPassword) return false;
+  if (identifier !== normalizeEmail(configuredAdminUsername)) return false;
+
+  const supplied = Buffer.from(String(password), 'utf8');
+  const expected = Buffer.from(configuredAdminPassword, 'utf8');
+  return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
 }
 
 export async function listManagedUsers() {
