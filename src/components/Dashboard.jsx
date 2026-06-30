@@ -19,7 +19,7 @@ export default function Dashboard({ user, onLogout }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
-  const handleLaunchApp = async (appId) => {
+  const handleLaunchApp = async (appId, { adminView = false } = {}) => {
     if (appId === 'money-planner' || appId === 'stock-planner') {
       if (launchingApp) return;
       setLaunchingApp(appId);
@@ -28,7 +28,7 @@ export default function Dashboard({ user, onLogout }) {
         const response = await fetch('/api/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ appId }),
+          body: JSON.stringify({ appId, adminView }),
         });
         const payload = await response.json().catch(() => ({}));
 
@@ -514,6 +514,44 @@ export default function Dashboard({ user, onLogout }) {
             </div>
             <p className="text-sm text-gray-400">Launch planning applications or explore pending services below.</p>
           </div>
+
+          {user?.role === 'admin' && (
+            <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Unified Admin Dashboard</p>
+                <h3 className="mt-1 text-lg font-bold text-white">Planner Administration</h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                  Use this LiveUnloan admin session to manage accounts and securely open every connected planner.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => handleLaunchApp('money-planner')}
+                  disabled={Boolean(launchingApp)}
+                  className="rounded-xl border border-emerald-500/20 bg-gray-950/70 p-4 text-left transition-all hover:border-emerald-400/50 disabled:opacity-60"
+                >
+                  <span className="text-sm font-bold text-white">Money Planner</span>
+                  <span className="mt-1 block text-xs text-gray-400">Open the secured financial planner with this admin login.</span>
+                  <span className="mt-3 block text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    {launchingApp === 'money-planner' ? 'Opening...' : 'Open planner'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLaunchApp('stock-planner', { adminView: true })}
+                  disabled={Boolean(launchingApp)}
+                  className="rounded-xl border border-teal-500/20 bg-gray-950/70 p-4 text-left transition-all hover:border-teal-400/50 disabled:opacity-60"
+                >
+                  <span className="text-sm font-bold text-white">Stock Planner Admin</span>
+                  <span className="mt-1 block text-xs text-gray-400">Open portfolios, controls, and agent shadow validation.</span>
+                  <span className="mt-3 block text-xs font-bold uppercase tracking-wider text-teal-400">
+                    {launchingApp === 'stock-planner' ? 'Opening...' : 'Open admin view'}
+                  </span>
+                </button>
+              </div>
+            </section>
+          )}
 
           {/* Active Applications Section */}
           <div className="space-y-4">

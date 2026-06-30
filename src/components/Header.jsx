@@ -40,7 +40,7 @@ export default function Header({ user, onLogout }) {
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-xs text-gray-400">Welcome</p>
-              <p className="text-sm font-semibold text-gray-200 leading-tight">{user.username}</p>
+              <p className="text-sm font-semibold text-gray-200 leading-tight">{user.displayName || user.email}</p>
             </div>
             <button
               id="header-logout-btn"
