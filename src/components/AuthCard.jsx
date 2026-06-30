@@ -14,8 +14,10 @@ export default function AuthCard({ onLoginSuccess }) {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.email) newErrors.email = 'Email address is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Please enter a valid email address';
+    if (!formData.email) newErrors.email = 'Email address or admin username is required';
+    else if (formData.email.trim().toLowerCase() !== 'admin' && !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address or the admin username';
+    }
     if (!formData.password) newErrors.password = 'Password is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -54,12 +56,12 @@ export default function AuthCard({ onLoginSuccess }) {
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
-            <label htmlFor="auth-email" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email ID</label>
+            <label htmlFor="auth-email" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email ID or Admin Username</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
                 <Mail className="w-4 h-4" />
               </div>
-              <input id="auth-email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="you@example.com" className={`w-full bg-gray-950/60 border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${errors.email ? 'border-red-500/50 focus:ring-red-500/30' : 'border-gray-800 focus:border-emerald-500/50'}`} />
+              <input id="auth-email" name="email" type="text" autoComplete="username" value={formData.email} onChange={handleInputChange} placeholder="you@example.com or admin" className={`w-full bg-gray-950/60 border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${errors.email ? 'border-red-500/50 focus:ring-red-500/30' : 'border-gray-800 focus:border-emerald-500/50'}`} />
             </div>
             {errors.email && <p className="text-xs text-red-400 mt-1.5">{errors.email}</p>}
           </div>
@@ -70,7 +72,7 @@ export default function AuthCard({ onLoginSuccess }) {
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
                 <Key className="w-4 h-4" />
               </div>
-              <input id="auth-password" name="password" type="password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" className={`w-full bg-gray-950/60 border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${errors.password ? 'border-red-500/50 focus:ring-red-500/30' : 'border-gray-800 focus:border-emerald-500/50'}`} />
+              <input id="auth-password" name="password" type="password" autoComplete="current-password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" className={`w-full bg-gray-950/60 border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${errors.password ? 'border-red-500/50 focus:ring-red-500/30' : 'border-gray-800 focus:border-emerald-500/50'}`} />
             </div>
             {errors.password && <p className="text-xs text-red-400 mt-1.5">{errors.password}</p>}
           </div>

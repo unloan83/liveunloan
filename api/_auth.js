@@ -8,6 +8,7 @@ const sheetsScope = 'https://www.googleapis.com/auth/spreadsheets';
 const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
+const adminLoginAlias = 'admin';
 
 const seedAccounts = [
   { email: 'live.unloan@gmail.com', displayName: 'Admin', role: 'admin', salt: '8c39534f9012a9cc324980ee76347bcc', passwordHash: 'f2304cf6a142c8cecf66c0702a2289dc4ddf60400e9d0cdff0c3bcf6161e8de3' },
@@ -49,11 +50,17 @@ export function clearSessionCookie(res) {
 export async function validateCredentials(email, password) {
   const normalizedEmail = normalizeEmail(email);
   const overrides = await readAuthOverridesSafely();
-  const override = overrides.find((item) => normalizeEmail(item.email) === normalizedEmail);
+  const adminSeed = seedAccounts.find((account) => account.role === 'admin');
+  const isAdminAlias = normalizedEmail === adminLoginAlias;
+  const override = isAdminAlias
+    ? overrides.find((item) => item.seedEmail === adminSeed?.email)
+    : overrides.find((item) => normalizeEmail(item.email) === normalizedEmail);
 
   if (override) return verifyOverrideCredentials(override, password);
 
-  const seed = seedAccounts.find((account) => account.email === normalizedEmail);
+  const seed = isAdminAlias
+    ? adminSeed
+    : seedAccounts.find((account) => account.email === normalizedEmail);
   if (!seed) return null;
   if (overrides.some((item) => item.seedEmail === seed.email)) return null;
   if (!verifyPassword(password, seed.salt, seed.passwordHash)) return null;
